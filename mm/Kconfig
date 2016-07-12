@@ -8,16 +8,16 @@ choice
 	default DISCONTIGMEM_MANUAL if ARCH_DISCONTIGMEM_DEFAULT
 	default SPARSEMEM_MANUAL if ARCH_SPARSEMEM_DEFAULT
 	default FLATMEM_MANUAL
-
+	
 config FLATMEM_MANUAL
-	bool "Flat Memory"
-	depends on !(ARCH_DISCONTIGMEM_ENABLE || ARCH_SPARSEMEM_ENABLE) || ARCH_FLATMEM_ENABLE
+	  bool "Flat Memory"
+	    depends on !(ARCH_DISCONTIGMEM_ENABLE || ARCH_SPARSEMEM_ENABLE) || ARCH_FLATMEM_ENABLE
 	help
 	  This option allows you to change some of the ways that
 	  Linux manages its memory internally.  Most users will
 	  only have one option here: FLATMEM.  This is normal
 	  and a correct option.
-
+	  
 	  Some users of more advanced features like NUMA and
 	  memory hotplug may have different options here.
 	  DISCONTIGMEM is an more mature, better tested system,
@@ -25,7 +25,7 @@ config FLATMEM_MANUAL
 	  decreased performance over SPARSEMEM.  If unsure between
 	  "Sparse Memory" and "Discontiguous Memory", choose
 	  "Discontiguous Memory".
-
+	  
 	  If unsure, choose this option (Flat Memory) over any other.
 
 config DISCONTIGMEM_MANUAL
@@ -388,3 +388,25 @@ config DYNAMIC_PAGE_WRITEBACK
 	  when the system is suspended and when the system has been resumed.
 
 	  If unsure, say N to disable this feature
+
+config MEMORY_HOLE_CARVEOUT
+        bool
+        help
+          MEMORY_HOLE_CARVEOUT is needed to include the msm_mem_hole driver
+          which is needed to enable/disable memblock-remove features for
+          device tree nodes that set compatible="qcom,msm-mem-hole". The
+          corresponding device tree node provides the address and size of
+          the memory corresponding to the hole to be removed using memblock-
+          remove.
+
+config USE_USER_ACCESSIBLE_TIMERS
+	bool "Enables timers accessible from userspace"
+	depends on MMU
+	help
+	  User-accessible timers allow the kernel to map kernel timer
+	  registers to a userspace accessible page, to allow faster
+	  access to time information.  This flag will enable the
+	  interface code in the main kernel.  However, there are
+	  architecture-specific code that will need to be enabled
+	  separately.
+

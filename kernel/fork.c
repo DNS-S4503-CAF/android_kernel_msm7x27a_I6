@@ -596,7 +596,6 @@ void mmput(struct mm_struct *mm)
 			list_del(&mm->mmlist);
 			spin_unlock(&mmlist_lock);
 		}
-		put_swap_token(mm);
 		if (mm->binfmt)
 			module_put(mm->binfmt->module);
 		mmdrop(mm);
@@ -812,10 +811,6 @@ struct mm_struct *dup_mm(struct task_struct *tsk)
 	memcpy(mm, oldmm, sizeof(*mm));
 	mm_init_cpumask(mm);
 
-	/* Initializing for Swap token stuff */
-	mm->token_priority = 0;
-	mm->last_interval = 0;
-
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	mm->pmd_huge_pte = NULL;
 #endif
@@ -893,9 +888,6 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
 		goto fail_nomem;
 
 good_mm:
-	/* Initializing for Swap token stuff */
-	mm->token_priority = 0;
-	mm->last_interval = 0;
 
 	tsk->mm = mm;
 	tsk->active_mm = mm;
@@ -1042,6 +1034,11 @@ static int copy_signal(unsigned long clone_flags, struct task_struct *tsk)
 	sig->nr_threads = 1;
 	atomic_set(&sig->live, 1);
 	atomic_set(&sig->sigcnt, 1);
+
+	/* list_add(thread_node, thread_head) without INIT_LIST_HEAD() */
+	sig->thread_head = (struct list_head)LIST_HEAD_INIT(tsk->thread_node);
+	tsk->thread_node = (struct list_head)LIST_HEAD_INIT(sig->thread_head);
+
 	init_waitqueue_head(&sig->wait_chldexit);
 	if (clone_flags & CLONE_NEWPID)
 		sig->flags |= SIGNAL_UNKILLABLE;
@@ -1443,7 +1440,10 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 		atomic_inc(&current->signal->live);
 		atomic_inc(&current->signal->sigcnt);
 		p->group_leader = current->group_leader;
-		list_add_tail_rcu(&p->thread_group, &p->group_leader->thread_group);
+		list_add_tail_rcu(&p->thread_group,
+				  &p->group_leader->thread_group);
+		list_add_tail_rcu(&p->thread_node,
+				  &p->signal->thread_head);
 	}
 
 	if (likely(p->pid)) {

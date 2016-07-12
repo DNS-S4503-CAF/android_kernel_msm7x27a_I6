@@ -371,14 +371,14 @@ checks:
 	return offset;
 
 scan:
-	spin_unlock(&swap_lock);
+	spin_unlock(&si->lock);
 	while (++offset <= si->highest_bit) {
 		if (!si->swap_map[offset]) {
-			spin_lock(&swap_lock);
+			spin_lock(&si->lock);
 			goto checks;
 		}
 		if (vm_swap_full() && si->swap_map[offset] == SWAP_HAS_CACHE) {
-			spin_lock(&swap_lock);
+			spin_lock(&si->lock);
 			goto checks;
 		}
 		if (unlikely(--latency_ration < 0)) {
@@ -389,11 +389,11 @@ scan:
 	offset = si->lowest_bit;
 	while (++offset < scan_base) {
 		if (!si->swap_map[offset]) {
-			spin_lock(&swap_lock);
+			spin_lock(&si->lock);
 			goto checks;
 		}
 		if (vm_swap_full() && si->swap_map[offset] == SWAP_HAS_CACHE) {
-			spin_lock(&swap_lock);
+			spin_lock(&si->lock);
 			goto checks;
 		}
 		if (unlikely(--latency_ration < 0)) {
@@ -1653,6 +1653,7 @@ SYSCALL_DEFINE1(swapoff, const char __user *, specialfile)
 	swap_map = p->swap_map;
 	p->swap_map = NULL;
 	p->flags = 0;
+	spin_unlock(&p->lock);
 	spin_unlock(&swap_lock);
 	mutex_unlock(&swapon_mutex);
 	vfree(swap_map);
@@ -2307,6 +2308,7 @@ int swapcache_prepare(swp_entry_t entry)
  * page table locks; if it fails, add_swap_count_continuation(, GFP_KERNEL)
  * can be called after dropping locks.
  */
+
 int add_swap_count_continuation(swp_entry_t entry, gfp_t gfp_mask)
 {
 	struct swap_info_struct *si;
